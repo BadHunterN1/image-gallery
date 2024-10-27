@@ -14,7 +14,7 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from the public directory
-app.use(express.static(path.join(__dirname, "../public")));
+app.use("/imgs", express.static(path.join(__dirname, "public/imgs")));
 
 // Function to get file stats with error handling
 async function getFileStats(fullPath) {
