@@ -414,9 +414,7 @@ class ImageGallery {
 
 	async loadFolderStructure() {
 		try {
-			const response = await fetch(
-				"https://your-vercel-domain.vercel.app/api/folder-structure"
-			);
+			const response = await fetch("/api/folder-structure");
 			this.folderStructure = await response.json();
 		} catch (error) {
 			console.error("Error loading folder structure:", error);

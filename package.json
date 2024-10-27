@@ -2,9 +2,14 @@
 	"name": "image-gallery",
 	"version": "1.0.0",
 	"description": "Image Gallery System",
+	"scripts": {
+		"start": "node api/server.js",
+		"dev": "nodemon api/server.js"
+	},
 	"dependencies": {
 		"express": "^4.17.1",
-		"@vercel/node": "^1.12.0"
+		"@vercel/node": "^1.12.0",
+		"swiper": "^8.4.5"
 	},
 	"devDependencies": {
 		"nodemon": "^2.0.15"
