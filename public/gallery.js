@@ -49,7 +49,12 @@ class ImageGallery {
 
 		let filteredContent = {
 			folders: [...content.folders],
-			images: [...content.images],
+			images: [...content.images].map((img) => ({
+				...img,
+				lastModified: img.lastModified
+					? new Date(img.lastModified)
+					: new Date(),
+			})),
 		};
 
 		// Apply search filter
@@ -66,9 +71,7 @@ class ImageGallery {
 
 		// Apply date filter
 		if (dateFilter) {
-			filteredContent.images = filteredContent.images.filter((img) =>
-				this.isWithinDateRange(img.lastModified || Date.now(), dateFilter)
-			);
+			filteredContent = this.filterByDate(filteredContent, dateFilter);
 		}
 
 		// Apply sorting
@@ -82,32 +85,64 @@ class ImageGallery {
 	}
 
 	getSortFunction(sortOrder) {
-		const sortFunctions = {
-			newest: (a, b) => (b.lastModified || 0) - (a.lastModified || 0),
-			oldest: (a, b) => (a.lastModified || 0) - (b.lastModified || 0),
-			name: (a, b) => a.name.localeCompare(b.name),
-			nameDesc: (a, b) => b.name.localeCompare(a.name),
-		};
-		return sortFunctions[sortOrder] || sortFunctions.newest;
+		return (
+			{
+				newest: (a, b) => {
+					const dateA = new Date(a.lastModified || 0);
+					const dateB = new Date(b.lastModified || 0);
+					return dateB.getTime() - dateA.getTime();
+				},
+				oldest: (a, b) => {
+					const dateA = new Date(a.lastModified || 0);
+					const dateB = new Date(b.lastModified || 0);
+					return dateA.getTime() - dateB.getTime();
+				},
+				name: (a, b) => a.name.localeCompare(b.name),
+				nameDesc: (a, b) => b.name.localeCompare(a.name),
+			}[sortOrder] || ((a, b) => 0)
+		);
 	}
-
 	isWithinDateRange(timestamp, range) {
-		const date = new Date(timestamp);
+		// Convert timestamp to Date object if it isn't already
+		const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+
+		// Get start of today in user's timezone
 		const now = new Date();
-		const dayInMs = 86400000;
+		const startOfToday = new Date(
+			now.getFullYear(),
+			now.getMonth(),
+			now.getDate()
+		);
+
+		// Get the date parts in user's timezone
+		const year = date.getFullYear();
+		const month = date.getMonth();
+		const dayOfMonth = date.getDate();
+		const dayOfWeek = date.getDay();
 
 		switch (range) {
 			case "today":
-				return date.toDateString() === now.toDateString();
-			case "week":
-				return now - date <= 7 * dayInMs;
-			case "month":
-				return (
-					date.getMonth() === now.getMonth() &&
-					date.getFullYear() === now.getFullYear()
-				);
-			case "year":
-				return date.getFullYear() === now.getFullYear();
+				return date >= startOfToday;
+
+			case "week": {
+				// Calculate start of current week (Sunday)
+				const startOfWeek = new Date(startOfToday);
+				startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+				return date >= startOfWeek;
+			}
+
+			case "month": {
+				// Calculate start of current month
+				const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+				return date >= startOfMonth;
+			}
+
+			case "year": {
+				// Calculate start of current year
+				const startOfYear = new Date(now.getFullYear(), 0, 1);
+				return date >= startOfYear;
+			}
+
 			default:
 				return true;
 		}
@@ -439,27 +474,23 @@ class ImageGallery {
 	filterByDate(content, dateFilter) {
 		if (!dateFilter) return content;
 
-		const now = new Date();
-		const filtered = {
+		return {
 			folders: content.folders,
 			images: content.images.filter((img) => {
-				const fileDate = this.getFileDate(img);
-				switch (dateFilter) {
-					case "today":
-						return this.isToday(fileDate);
-					case "week":
-						return this.isThisWeek(fileDate);
-					case "month":
-						return this.isThisMonth(fileDate);
-					case "year":
-						return this.isThisYear(fileDate);
-					default:
-						return true;
+				// Ensure we have a valid date
+				const fileDate = img.lastModified
+					? new Date(img.lastModified)
+					: new Date();
+
+				// Check if the date is valid before filtering
+				if (isNaN(fileDate.getTime())) {
+					console.warn(`Invalid date for file: ${img.name}`);
+					return true; // Include items with invalid dates
 				}
+
+				return this.isWithinDateRange(fileDate, dateFilter);
 			}),
 		};
-
-		return filtered;
 	}
 
 	getFileDate(file) {
