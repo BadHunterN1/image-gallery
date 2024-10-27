@@ -14,28 +14,10 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from the public directory
-app.use("/imgs", express.static(path.join(__dirname, "public/imgs")));
-
-// Function to get file stats with error handling
-async function getFileStats(fullPath) {
-	try {
-		const stats = await fs.stat(fullPath);
-		return {
-			// Convert to ISO string for consistent timezone handling
-			lastModified: stats.mtime.toISOString(),
-			size: stats.size,
-		};
-	} catch (error) {
-		console.warn(`Error getting stats for ${fullPath}:`, error);
-		return {
-			lastModified: new Date().toISOString(),
-			size: 0,
-		};
-	}
-}
+app.use(express.static(path.join(__dirname, "../public")));
 
 // Function to recursively get folder structure
-async function getFolderStructure(dirPath, baseDir) {
+async function getFolderStructure(dirPath) {
 	try {
 		const items = await fs.readdir(dirPath, { withFileTypes: true });
 		const structure = {
@@ -43,41 +25,30 @@ async function getFolderStructure(dirPath, baseDir) {
 			images: [],
 		};
 
-		baseDir = baseDir || dirPath;
-
 		for (const item of items) {
 			const fullPath = path.join(dirPath, item.name);
-			// Calculate path relative to the public directory for URLs
-			const relativePath = path.relative(baseDir, fullPath);
+			const relativePath = path.relative(
+				path.join(__dirname, "../public"),
+				fullPath
+			);
 
 			if (item.isDirectory()) {
-				const folderStats = await getFileStats(fullPath);
 				structure.folders.push({
 					name: item.name,
 					type: "folder",
-					path: relativePath.replace(/\\/g, "/"),
-					lastModified: folderStats.lastModified,
-					content: await getFolderStructure(fullPath, baseDir),
+					path: relativePath,
+					content: await getFolderStructure(fullPath),
 				});
 			} else if (isImageFile(item.name)) {
-				const fileStats = await getFileStats(fullPath);
+				const stats = await fs.stat(fullPath);
 				structure.images.push({
 					name: item.name,
 					type: "image",
 					path: relativePath.replace(/\\/g, "/"),
-					lastModified: fileStats.lastModified,
-					size: fileStats.size,
+					lastModified: stats.mtime.getTime(),
 				});
 			}
 		}
-
-		// Sort folders and images by lastModified date
-		structure.folders.sort(
-			(a, b) => new Date(b.lastModified) - new Date(a.lastModified)
-		);
-		structure.images.sort(
-			(a, b) => new Date(b.lastModified) - new Date(a.lastModified)
-		);
 
 		return structure;
 	} catch (error) {
@@ -95,29 +66,13 @@ function isImageFile(filename) {
 // API endpoint to get folder structure
 app.get("/api/folder-structure", async (req, res) => {
 	try {
-		const publicImgsPath = path.join(__dirname, "../public/imgs");
-
-		// Ensure the directory exists
-		try {
-			await fs.access(publicImgsPath);
-		} catch (error) {
-			console.error("Images directory not found:", error);
-			return res.json({ folders: [], images: [] });
-		}
-
-		const structure = await getFolderStructure(publicImgsPath, publicImgsPath);
-
-		// Add server timestamp for debugging
-		structure.serverTime = new Date().toISOString();
-
+		const structure = await getFolderStructure(
+			path.join(__dirname, "../public/imgs")
+		);
 		res.json(structure);
 	} catch (error) {
 		console.error("Error reading folder structure:", error);
-		res.status(500).json({
-			error: "Failed to read folder structure",
-			message: error.message,
-			serverTime: new Date().toISOString(),
-		});
+		res.status(500).json({ error: "Failed to read folder structure" });
 	}
 });
 
@@ -129,15 +84,13 @@ app.use((req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
 	console.error(err);
-	res.status(500).json({
-		error: "Internal server error",
-		message: err.message,
-		serverTime: new Date().toISOString(),
-	});
+	res.status(500).json({ error: "Internal server error" });
 });
 
+// Export the Express app
 module.exports = app;
 
+// Start the server if running directly
 if (require.main === module) {
 	const port = process.env.PORT || 3000;
 	app.listen(port, () => {
