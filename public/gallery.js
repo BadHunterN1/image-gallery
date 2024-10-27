@@ -493,59 +493,6 @@ class ImageGallery {
 		};
 	}
 
-	getFileDate(file) {
-		return new Date(file.lastModified || Date.now());
-	}
-
-	isToday(date) {
-		const today = new Date();
-		return (
-			date.getDate() === today.getDate() &&
-			date.getMonth() === today.getMonth() &&
-			date.getFullYear() === today.getFullYear()
-		);
-	}
-
-	isThisWeek(date) {
-		const now = new Date();
-		const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-		return date >= weekStart;
-	}
-
-	isThisMonth(date) {
-		const now = new Date();
-		return (
-			date.getMonth() === now.getMonth() &&
-			date.getFullYear() === now.getFullYear()
-		);
-	}
-
-	isThisYear(date) {
-		const now = new Date();
-		return date.getFullYear() === now.getFullYear();
-	}
-
-	sortContent(content, sortOrder) {
-		const sorted = {
-			folders: [...content.folders],
-			images: [...content.images],
-		};
-
-		const sortFn = {
-			newest: (a, b) => this.getFileDate(b) - this.getFileDate(a),
-			oldest: (a, b) => this.getFileDate(a) - this.getFileDate(b),
-			name: (a, b) => a.name.localeCompare(b.name),
-			nameDesc: (a, b) => b.name.localeCompare(a.name),
-		};
-
-		if (sortOrder in sortFn) {
-			sorted.folders.sort(sortFn[sortOrder]);
-			sorted.images.sort(sortFn[sortOrder]);
-		}
-
-		return sorted;
-	}
-
 	async getContentForPath(path) {
 		// This would be replaced with actual API call in production
 		return this.folderStructure[path] || { folders: [], images: [] };
