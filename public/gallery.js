@@ -102,51 +102,6 @@ class ImageGallery {
 			}[sortOrder] || ((a, b) => 0)
 		);
 	}
-	isWithinDateRange(timestamp, range) {
-		// Convert timestamp to Date object if it isn't already
-		const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
-
-		// Get start of today in user's timezone
-		const now = new Date();
-		const startOfToday = new Date(
-			now.getFullYear(),
-			now.getMonth(),
-			now.getDate()
-		);
-
-		// Get the date parts in user's timezone
-		const year = date.getFullYear();
-		const month = date.getMonth();
-		const dayOfMonth = date.getDate();
-		const dayOfWeek = date.getDay();
-
-		switch (range) {
-			case "today":
-				return date >= startOfToday;
-
-			case "week": {
-				// Calculate start of current week (Sunday)
-				const startOfWeek = new Date(startOfToday);
-				startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
-				return date >= startOfWeek;
-			}
-
-			case "month": {
-				// Calculate start of current month
-				const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-				return date >= startOfMonth;
-			}
-
-			case "year": {
-				// Calculate start of current year
-				const startOfYear = new Date(now.getFullYear(), 0, 1);
-				return date >= startOfYear;
-			}
-
-			default:
-				return true;
-		}
-	}
 
 	handleDoubleTap(e) {
 		const currentTime = new Date().getTime();
