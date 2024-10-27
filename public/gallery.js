@@ -66,9 +66,29 @@ class ImageGallery {
 
 		// Apply date filter
 		if (dateFilter) {
-			filteredContent.images = filteredContent.images.filter((img) =>
-				this.isWithinDateRange(img.lastModified || Date.now(), dateFilter)
-			);
+			const now = new Date();
+			const dayInMs = 86400000; // 24 hours in milliseconds
+
+			filteredContent.images = filteredContent.images.filter((img) => {
+				const imgDate = new Date(img.lastModified);
+
+				switch (dateFilter) {
+					case "today":
+						return this.isSameDay(imgDate, now);
+					case "week":
+						const weekAgo = new Date(now - 7 * dayInMs);
+						return imgDate >= weekAgo;
+					case "month":
+						return (
+							imgDate.getMonth() === now.getMonth() &&
+							imgDate.getFullYear() === now.getFullYear()
+						);
+					case "year":
+						return imgDate.getFullYear() === now.getFullYear();
+					default:
+						return true;
+				}
+			});
 		}
 
 		// Apply sorting
@@ -79,6 +99,15 @@ class ImageGallery {
 		}
 
 		this.renderContent(filteredContent);
+	}
+
+	// Helper function to compare dates for same day
+	isSameDay(date1, date2) {
+		return (
+			date1.getDate() === date2.getDate() &&
+			date1.getMonth() === date2.getMonth() &&
+			date1.getFullYear() === date2.getFullYear()
+		);
 	}
 
 	getSortFunction(sortOrder) {
@@ -434,64 +463,6 @@ class ImageGallery {
 		if (image) {
 			image.style.transform = `scale(${this.zoomLevel})`;
 		}
-	}
-
-	filterByDate(content, dateFilter) {
-		if (!dateFilter) return content;
-
-		const now = new Date();
-		const filtered = {
-			folders: content.folders,
-			images: content.images.filter((img) => {
-				const fileDate = this.getFileDate(img);
-				switch (dateFilter) {
-					case "today":
-						return this.isToday(fileDate);
-					case "week":
-						return this.isThisWeek(fileDate);
-					case "month":
-						return this.isThisMonth(fileDate);
-					case "year":
-						return this.isThisYear(fileDate);
-					default:
-						return true;
-				}
-			}),
-		};
-
-		return filtered;
-	}
-
-	getFileDate(file) {
-		return new Date(file.lastModified || Date.now());
-	}
-
-	isToday(date) {
-		const today = new Date();
-		return (
-			date.getDate() === today.getDate() &&
-			date.getMonth() === today.getMonth() &&
-			date.getFullYear() === today.getFullYear()
-		);
-	}
-
-	isThisWeek(date) {
-		const now = new Date();
-		const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-		return date >= weekStart;
-	}
-
-	isThisMonth(date) {
-		const now = new Date();
-		return (
-			date.getMonth() === now.getMonth() &&
-			date.getFullYear() === now.getFullYear()
-		);
-	}
-
-	isThisYear(date) {
-		const now = new Date();
-		return date.getFullYear() === now.getFullYear();
 	}
 
 	sortContent(content, sortOrder) {
